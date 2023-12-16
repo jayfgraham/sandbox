@@ -1,23 +1,21 @@
-
-
 import cantera as ct
 import numpy as np
 import matplotlib.pyplot as plt
 
-fuel = 'CH4'
+fuel = "CH4"
 stoich = 4
 
 gas = ct.Solution("gri30.yaml")
 
-reactor_temp = 1000 * 5/9  # K
+reactor_temp = 1000 * 5 / 9  # K
 reactor_pressure = 14.7 * 6894  # Pa
 
 # gas.set_equivalence_ratio(phi=1.0, fuel="CH4", oxidizer="O2")
 gas.TP = reactor_temp, reactor_pressure
 
-temp_range = np.geomspace(1000*(5/9),4000*(5/9),15)
+temp_range = np.geomspace(1000 * (5 / 9), 4000 * (5 / 9), 15)
 phi_range = np.geomspace((1 / 1.5) / (1 / stoich), (1 / 110) / (1 / stoich), 15)
-OF_range = np.geomspace(1.5,110,15)
+OF_range = np.geomspace(1.5, 110, 15)
 
 # reactor = ct.ConstPressureReactor(contents=gas)
 # reactor_network = ct.ReactorNet([reactor])
@@ -25,16 +23,16 @@ OF_range = np.geomspace(1.5,110,15)
 # append time 't'
 # time_history = ct.SolutionArray(gas, extra="t")
 
-print('%10s  %10s %10s %10s %14s' % ('step','t [s]','T [K]','P [Pa]','u [J/kg]'))
+print("%10s  %10s %10s %10s %14s" % ("step", "t [s]", "T [K]", "P [Pa]", "u [J/kg]"))
 
 tau_array = []
-range ={}
+range = {}
 for h in temp_range:
     tau_array = []
     for i in OF_range:
         # How long we want to run our sim
         # gas.set_equivalence_ratio(phi=i, fuel=fuel, oxidizer="O2")
-        gas.Y = {'CH4': .935, 'C2H6': .062, 'C3H8': .002, 'N2': .0002, 'O2': i}
+        gas.Y = {"CH4": 0.935, "C2H6": 0.062, "C3H8": 0.002, "N2": 0.0002, "O2": i}
         gas.TP = h, reactor_pressure
         time_history = ct.SolutionArray(gas, extra="t")
         estimated_ignition_delay = 1e8
@@ -56,20 +54,24 @@ for h in temp_range:
             tau = time_history.t[i_ign]
             tau_array.append(tau)
             # print(f"computed ignition delay: {tau:.5e} seconds")
-            if temp > 1.5*h and stop_flag == False:
-                tout = t*1.5
+            if temp > 1.5 * h and stop_flag == False:
+                tout = t * 1.5
                 stop_flag = True
 
-            print('h=%10.1f: %10.3e %10.3f %10.3f %14.6e' % (h, reactor_network.time, reactor.T,
-                                               reactor.thermo.P, reactor.thermo.u))
-
-
+            print(
+                "h=%10.1f: %10.3e %10.3f %10.3f %14.6e"
+                % (
+                    h,
+                    reactor_network.time,
+                    reactor.T,
+                    reactor.thermo.P,
+                    reactor.thermo.u,
+                )
+            )
 
     # name = f"{h}_tau"
 
     range[f"T_{round(h*(9/5))}R"] = tau_array
-
-
 
 
 mr = 1 / (phi_range * (1 / stoich))
@@ -89,95 +91,16 @@ for l in range:
     ax.set_ylabel(r"$\tau$")
     ax.set_yscale("log")
     ax.legend()
-ax.set_title(f"Ignition Delay vs MR for {fuel} & O2 at P = {round(reactor_pressure/(6894))} psi")
-plt.legend(loc='best')
+ax.set_title(
+    f"Ignition Delay vs MR for {fuel} & O2 at P = {round(reactor_pressure/(6894))} psi"
+)
+plt.legend(loc="best")
 plt.grid()
 plt.show()
 
 # -*- coding: utf-8 -*-
-#"""
-#Created on Thu Jan 11 11:01:20 2018
+# """
+# Created on Thu Jan 11 11:01:20 2018
 #
-#@author: jonahzimmerman
-#"""
-
-
-
-import sys
-import cantera as ct
-import numpy as np
-import matplotlib.pyplot as plt
-
-T = 1000 * 5/9
-P = 3600 * 101325/14.7
-
-OF = 4
-
-gas = ct.Solution('gri30.xml')
-
-gas.Y = {'CH4':.935, 'C2H6':.062, 'C3H8':.002, 'N2':.0002, 'O2':OF}
-gas.TP = T, P
-
-#gas1()
-#
-#gas1.equilibrate('HP')
-#gas1()
-#
-#rf = gas1.forward_rates_of_progress
-#rr = gas1.reverse_rates_of_progress
-#for i in range(gas1.n_reactions):
-#    if gas1.is_reversible(i) and rf[i] != 0.0:
-#        print(' %4i  %10.4g  ' % (i, (rf[i] - rr[i])/rf[i]))
-#        
-        
-r = ct.ConstPressureReactor(gas)
-
-sim = ct.ReactorNet([r])
-time = 0.0
-states = ct.SolutionArray(gas, extra=['t'])
-
-print('%10s %10s %10s %14s' % ('t [s]','T [K]','P [Pa]','u [J/kg]'))
-#for n in range(100):
-#    time += 1.e+4
-#    sim.advance(time)
-#    states.append(r.thermo.state, t=time*1e3)
-#    print('%10.3e %10.3f %10.3f %14.6e' % (sim.time, r.T,
-#                                           r.thermo.P, r.thermo.u))
-time = 0.0
-tout = 1e8
-stop_flag = False
-temp = T
-while time < tout:
-    time = sim.step()
-    states.append(r.thermo.state, t=time*1e3)
-    temp = r.T
-    if temp > 1.5*T and stop_flag == False:
-        tout = time*1.5
-        stop_flag = True
-        
-    print('%10.3e %10.3f %10.3f %14.6e' % (sim.time, r.T,
-                                       r.thermo.P, r.thermo.u))
-
-plt.clf()
-plt.subplot(2, 2, 1)
-plt.plot(states.t, states.T)
-plt.xlabel('Time (ms)')
-plt.ylabel('Temperature (K)')
-plt.grid()
-plt.subplot(2, 2, 2)
-plt.plot(states.t, states.X[:,gas.species_index('CH4')])
-plt.xlabel('Time (ms)')
-plt.ylabel('CH4 Mole Fraction')
-plt.grid()
-plt.subplot(2, 2, 3)
-plt.plot(states.t, states.X[:,gas.species_index('O2')])
-plt.xlabel('Time (ms)')
-plt.ylabel('O2 Mole Fraction')
-plt.grid()
-plt.subplot(2, 2, 4)
-plt.plot(states.t, states.X[:,gas.species_index('H2O')])
-plt.xlabel('Time (ms)')
-plt.ylabel('H2O Mole Fraction')
-plt.grid()
-plt.tight_layout()
-plt.show()
+# @author: jonahzimmerman
+# """
