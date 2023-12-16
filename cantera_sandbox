@@ -1,6 +1,11 @@
 import cantera as ct
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
+import plotly.express as px
+import plotly.io as pio
+
+pio.renderers.default = "browser"
 
 fuel = "CH4"
 stoich = 4
@@ -10,12 +15,12 @@ gas = ct.Solution("gri30.yaml")
 reactor_temp = 1000 * 5 / 9  # K
 reactor_pressure = 14.7 * 6894  # Pa
 
-# gas.set_equivalence_ratio(phi=1.0, fuel="CH4", oxidizer="O2")
+gas.set_equivalence_ratio(phi=1.0, fuel="CH4", oxidizer="O2")
 gas.TP = reactor_temp, reactor_pressure
 
 temp_range = np.geomspace(1000 * (5 / 9), 4000 * (5 / 9), 15)
 phi_range = np.geomspace((1 / 1.5) / (1 / stoich), (1 / 110) / (1 / stoich), 15)
-OF_range = np.geomspace(1.5, 110, 15)
+# OF_range = np.geomspace(1.5, 110, 15)
 
 # reactor = ct.ConstPressureReactor(contents=gas)
 # reactor_network = ct.ReactorNet([reactor])
@@ -29,13 +34,13 @@ tau_array = []
 range = {}
 for h in temp_range:
     tau_array = []
-    for i in OF_range:
+    for i in phi_range:
         # How long we want to run our sim
-        # gas.set_equivalence_ratio(phi=i, fuel=fuel, oxidizer="O2")
-        gas.Y = {"CH4": 0.935, "C2H6": 0.062, "C3H8": 0.002, "N2": 0.0002, "O2": i}
+        gas.set_equivalence_ratio(phi=i, fuel=fuel, oxidizer="O2")
+        # gas.Y = {"CH4": 0.935, "C2H6": 0.062, "C3H8": 0.002, "N2": 0.0002, "O2": i}
         gas.TP = h, reactor_pressure
         time_history = ct.SolutionArray(gas, extra="t")
-        estimated_ignition_delay = 1e8
+        tout = 1e12
         t = 0
         # gas.set_equivalence_ratio(phi=i, fuel=fuel, oxidizer="O2")
         # gas.TP = h, reactor_pressure
@@ -43,25 +48,38 @@ for h in temp_range:
         reactor_network = ct.ReactorNet([reactor])
 
         stop_flag = False
-        while t < estimated_ignition_delay:
+        while t < tout:
             t = reactor_network.step()
             # append state
             time_history.append(reactor.thermo.state, t=t)
             temp = reactor.T
-            reference_species = "OH"
+            # reference_species = "OH"
 
-            i_ign = time_history(reference_species).Y.argmax()
-            tau = time_history.t[i_ign]
-            tau_array.append(tau)
+            # i_ign = time_history(reference_species).Y.argmax()
+            # tau = time_history.t[i_ign]
+            # tau_array.append(tau)
+            y = reactor.Y[gas.species_index("CH4")]
+
+            if y < 1e-13:
+                reactime = t
+                tau_array.append(reactime)
+                tout = t - 1
+                # break
+            else:
+                reactime = t
+                if t > tout:
+                    tau_array.append(reactime)
+
             # print(f"computed ignition delay: {tau:.5e} seconds")
-            if temp > 1.5 * h and stop_flag == False:
-                tout = t * 1.5
-                stop_flag = True
+            # if temp > 1.5 * h and stop_flag == False:
+            #     tout = t * 1.5
+            #     stop_flag = True
 
             print(
-                "h=%10.1f: %10.3e %10.3f %10.3f %14.6e"
+                "h=%10.1f, i=%10.1f: %10.3e %10.3f %10.3f %14.6e"
                 % (
                     h,
+                    i,
                     reactor_network.time,
                     reactor.T,
                     reactor.thermo.P,
@@ -83,6 +101,22 @@ mr = 1 / (phi_range * (1 / stoich))
 # ax.set_title(f"Ignition Delay vs MR for CH4 & O2 @ T = {reactor_temp *9/5}°R & P = {reactor_pressure/(6894)} psi")
 # plt.show()
 
+rd = pd.DataFrame.from_dict(range)
+rd["mr"] = mr
+
+# sf = pd.DataFrame({"t": states.t, "T": states.T})
+fig = px.scatter(rd, x="mr", y=f"T_1000R", title="tau vs MR", log_y=True)
+for h in temp_range:
+    # fig = px.scatter(rd, x="mr", y=f"T_{round(h*(9/5))}R", title="tau vs MR")
+    fig.add_scatter(
+        x=rd["mr"],
+        y=rd[f"T_{round(h*(9/5))}R"],
+        name=f"T_{round(h*(9/5))}R",
+        # log_y=True,
+    )
+    fig.update_yaxes(type="log")
+    # fig = px.scatter(rd, x="mr", y=f"T_1000R", title="tau vs MR")
+fig.show()
 
 fig, ax = plt.subplots()
 for l in range:

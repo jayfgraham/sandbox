@@ -1,7 +1,12 @@
 import sys
 import cantera as ct
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
+import plotly.express as px
+import plotly.io as pio
+
+pio.renderers.default = "browser"
 
 plt.ion()
 
@@ -47,12 +52,25 @@ temp = T
 while time < tout:
     time = sim.step()
     states.append(r.thermo.state, t=time * 1e3)
+    y = r.Y[gas.species_index("CH4")]
     temp = r.T
-    if temp > 1.5 * T and stop_flag == False:
-        tout = time * 1.5
-        stop_flag = True
+
+    if y < 1e-13:
+        reactime = time
+        print("found it")
+
+    # if temp > 1.5 * T and stop_flag == False:
+    #     tout = time * 1.5
+    #     stop_flag = True
 
     print("%10.3e %10.3f %10.3f %14.6e" % (sim.time, r.T, r.thermo.P, r.thermo.u))
+
+sf = pd.DataFrame({"t": states.t, "T": states.T})
+
+fig = px.line(sf, x="t", y="T", title="Temp vs Time")
+fig = px.scatter(sf, x="t", y="T", title="Temp vs Time")
+fig.show()
+
 
 plt.clf()
 plt.subplot(2, 2, 1)
