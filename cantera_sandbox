@@ -15,11 +15,11 @@ gas = ct.Solution("gri30.yaml")
 reactor_temp = 1000 * 5 / 9  # K
 reactor_pressure = 14.7 * 6894  # Pa
 
-gas.set_equivalence_ratio(phi=1.0, fuel="CH4", oxidizer="O2")
-gas.TP = reactor_temp, reactor_pressure
+# gas.set_equivalence_ratio(phi=1.0, fuel="CH4", oxidizer="O2")
+# gas.TP = reactor_temp, reactor_pressure
 
-temp_range = np.geomspace(1000 * (5 / 9), 4000 * (5 / 9), 15)
-phi_range = np.geomspace((1 / 1.5) / (1 / stoich), (1 / 110) / (1 / stoich), 15)
+temp_range = np.geomspace(1850 * (5 / 9), 4500 * (5 / 9), 15)  # K
+phi_range = np.geomspace((1 / 4) / (1 / stoich), (1 / 40) / (1 / stoich), 15)
 # OF_range = np.geomspace(1.5, 110, 15)
 
 # reactor = ct.ConstPressureReactor(contents=gas)
@@ -105,7 +105,13 @@ rd = pd.DataFrame.from_dict(range)
 rd["mr"] = mr
 
 # sf = pd.DataFrame({"t": states.t, "T": states.T})
-fig = px.scatter(rd, x="mr", y=f"T_1000R", title="tau vs MR", log_y=True)
+fig = px.scatter(
+    rd,
+    x="mr",
+    y="T_1850R",
+    title=r"$Ignition Delay - CH_{4} & O_{2}$",
+    log_y=True,
+)
 for h in temp_range:
     # fig = px.scatter(rd, x="mr", y=f"T_{round(h*(9/5))}R", title="tau vs MR")
     fig.add_scatter(
@@ -114,27 +120,22 @@ for h in temp_range:
         name=f"T_{round(h*(9/5))}R",
         # log_y=True,
     )
-    fig.update_yaxes(type="log")
+    fig.update_yaxes(type="log", exponentformat="e", range=[-6, 1])
     # fig = px.scatter(rd, x="mr", y=f"T_1000R", title="tau vs MR")
+fig.update_layout(yaxis_title=r"$\tau_{ign}$", xaxis_title="MR", font={"size": 20})
 fig.show()
 
-fig, ax = plt.subplots()
-for l in range:
-    ax.plot(mr, range[l], label=f"{l}")
-    ax.set_xlabel("MR")
-    ax.set_ylabel(r"$\tau$")
-    ax.set_yscale("log")
-    ax.legend()
-ax.set_title(
-    f"Ignition Delay vs MR for {fuel} & O2 at P = {round(reactor_pressure/(6894))} psi"
-)
-plt.legend(loc="best")
-plt.grid()
-plt.show()
-
-# -*- coding: utf-8 -*-
-# """
-# Created on Thu Jan 11 11:01:20 2018
-#
-# @author: jonahzimmerman
-# """
+# fig, ax = plt.subplots()
+# for l in range:
+#     ax.plot(mr, range[l], label=f"{l}")
+#     ax.set_xlabel("MR")
+#     ax.set_ylabel(r"$\tau$")
+#     ax.set_yscale("log")
+#     ax.legend()
+# ax.set_title(
+#     f"Ignition Delay vs MR for {fuel} & O2 at P = {round(reactor_pressure/(6894))} psi"
+# )
+# fig.update_layout(yaxis={"exponentformat": "e"})
+# plt.legend(loc="best")
+# plt.grid()
+# plt.show()
